@@ -5,12 +5,14 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
 
 import DashBoard.DashBoard.Model.Dashboard;
 import DashBoard.DashBoard.Repository.DashRepository;
 import DashBoard.DashBoard.Service.DashBoardService;
 
 @SpringBootTest
+@ActiveProfiles("test")
 class DashBoardApplicationTests {
 
 	@Test
