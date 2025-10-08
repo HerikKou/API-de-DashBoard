@@ -1,0 +1,86 @@
+name: API Dashboard
+on:
+push:
+  branches:
+    - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Java setup
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          server-id: 'github'
+          settings-path: ${{ github.workspace }}
+
+      - name: Cache Maven packages
+        uses: actions/cache@v3
+        with:
+        path: ~/.m2
+        key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+        restore-keys: |
+         ${{ runner.os }}-maven-
+
+
+      - name: Maven   
+        run: mvn -B package --file pom.xml
+
+      - name: Run tests
+        run: mvn test
+
+      - name : iniciar spring-boot
+        run: mvn spring-boot:run &
+        uses: actions/github-script@v6
+
+      - name: Rodar  a aplicação e esperar estar disponível
+        run: |
+          npm install -g wait-on
+          mvn spring-boot:run &
+          npx wait-on http://localhost:8080/actuator/health
+
+      - name: Testar os endpoints da API
+        run: |
+          # Verifica se a aplicação subiu
+          curl -X GET "http://localhost:8080/actuator/health" -H "accept: application/json"
+
+          # Testa os endpoints do DashboardController
+          curl -X POST "http://localhost:8080/dashboard/register" \
+               -H "accept: application/json" \
+               -H "Content-Type: application/json" \
+               -d '{"name":"John Doe","email":"john.doe@example.com"}'
+
+          curl -X GET "http://localhost:8080/dashboard/profissao" -H "accept: application/json"
+          curl -X GET "http://localhost:8080/dashboard/cidade" -H "accept: application/json"
+          curl -X GET "http://localhost:8080/dashboard/estado" -H "accept: application/json"
+          curl -X GET "http://localhost:8080/dashboard/salarioMedio" -H "accept: application/json"
+          curl -X GET "http://localhost:8080/dashboard/salarioMedioPorCidade/SaoPaulo" -H "accept: application/json"
+          curl -X GET "http://localhost:8080/dashboard/pais" -H "accept: application/json"
+        
+      - name: Upload JAR artifact
+        uses: actions/upload-artifact@v3
+        with:
+         name: api-dashboard-jar
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Download JAR artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: api-dashboard-jar
+
+      - name: Deploy to Server
+        run: |
+          echo "Deploying to server..."
+          # Comandos de deploy, por exemplo, usando scp ou rsync para copiar o JAR para o servidor
+          # scp api-dashboard-jar/*.jar user@server:/path/to/deploy/
+          echo "Deploy completed."
